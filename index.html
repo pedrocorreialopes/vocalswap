@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VocalSwap — Substituição de Vocal com IA</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" />
+
+  <!-- WaveSurfer.js para visualização de áudio -->
+  <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════ HEADER ═══════════════════════ -->
+  <header id="app-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon"><i class="fa-solid fa-waveform-lines"></i></span>
+        <span class="logo-text">Vocal<strong>Swap</strong></span>
+      </div>
+      <nav class="header-nav" role="navigation" aria-label="Navegação principal">
+        <button class="nav-btn active" data-tab="studio" aria-selected="true">
+          <i class="fa-solid fa-sliders"></i> Estúdio
+        </button>
+        <button class="nav-btn" data-tab="library" aria-selected="false">
+          <i class="fa-solid fa-microphone-lines"></i> Biblioteca de Vozes
+          <span class="badge" id="voice-count-badge">0</span>
+        </button>
+        <button class="nav-btn" data-tab="projects" aria-selected="false">
+          <i class="fa-solid fa-folder-open"></i> Projetos
+        </button>
+      </nav>
+      <div class="header-actions">
+        <button class="btn-icon" id="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════ MAIN ═══════════════════════ -->
+  <main id="app-main">
+
+    <!-- ─────────── TAB: ESTÚDIO ─────────── -->
+    <section class="tab-panel active" id="tab-studio" role="tabpanel" aria-labelledby="btn-studio">
+
+      <!-- Backend Integration Notice -->
+      <div class="backend-banner" role="note" aria-label="Aviso de integração de backend">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>
+          <strong>MVP Frontend:</strong> Esta interface está pronta para integrar com um backend de separação vocal (Demucs/HTDemucs) e conversão de voz (RVC v2 / SoftVC). 
+          O fluxo de processamento é simulado — conecte a um endpoint REST para ativar o processamento real.
+        </span>
+      </div>
+
+      <!-- Hero / Intro Banner -->
+      <div class="studio-hero">
+        <div class="hero-text">
+          <h1>Substitua vocais com <span class="gradient-text">Inteligência Artificial</span></h1>
+          <p>Faça upload de uma música e de um vocal de referência. Nossa IA separa os stems, converte a voz e remonta a faixa final em segundos.</p>
+        </div>
+        <div class="hero-steps">
+          <div class="step-pill">
+            <span class="step-num">1</span>
+            <span>Upload da Música</span>
+          </div>
+          <i class="fa-solid fa-chevron-right step-arrow"></i>
+          <div class="step-pill">
+            <span class="step-num">2</span>
+            <span>Escolha o Vocal</span>
+          </div>
+          <i class="fa-solid fa-chevron-right step-arrow"></i>
+          <div class="step-pill">
+            <span class="step-num">3</span>
+            <span>Processe</span>
+          </div>
+          <i class="fa-solid fa-chevron-right step-arrow"></i>
+          <div class="step-pill">
+            <span class="step-num">4</span>
+            <span>Exporte</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Studio Grid -->
+      <div class="studio-grid">
+
+        <!-- ── COLUNA ESQUERDA: Upload da Música ── -->
+        <div class="card" id="card-music-upload">
+          <div class="card-header">
+            <span class="card-icon bg-purple"><i class="fa-solid fa-music"></i></span>
+            <div>
+              <h2 class="card-title">Música Base</h2>
+              <p class="card-subtitle">Envie a faixa que terá o vocal substituído</p>
+            </div>
+          </div>
+
+          <div class="upload-zone" id="music-upload-zone" tabindex="0" role="button" aria-label="Clique ou arraste um arquivo de música para fazer upload">
+            <input type="file" id="music-file-input" accept="audio/*" hidden aria-label="Selecionar arquivo de música" />
+            <div class="upload-placeholder" id="music-placeholder">
+              <div class="upload-icon-wrap">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <p class="upload-main-text">Arraste ou clique para enviar</p>
+              <p class="upload-sub-text">MP3, WAV, FLAC, AAC, OGG — máx. 100 MB</p>
+            </div>
+            <div class="upload-preview" id="music-preview" hidden>
+              <div class="file-info">
+                <span class="file-icon"><i class="fa-solid fa-file-audio"></i></span>
+                <div class="file-meta">
+                  <span class="file-name" id="music-file-name"></span>
+                  <span class="file-details" id="music-file-details"></span>
+                </div>
+                <button class="btn-remove" id="music-remove-btn" title="Remover arquivo" aria-label="Remover arquivo de música">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div id="music-waveform-container" class="waveform-container">
+                <div id="music-waveform"></div>
+              </div>
+              <div class="player-controls" id="music-player-controls">
+                <button class="btn-play" id="music-play-btn" aria-label="Reproduzir/Pausar música">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+                <div class="player-time">
+                  <span id="music-current-time">0:00</span>
+                  <span class="time-sep">/</span>
+                  <span id="music-duration">0:00</span>
+                </div>
+                <div class="volume-ctrl">
+                  <i class="fa-solid fa-volume-high volume-icon"></i>
+                  <input type="range" class="volume-slider" id="music-volume" min="0" max="1" step="0.01" value="1" aria-label="Volume da música" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parâmetros de separação -->
+          <div class="params-section" id="music-params" hidden>
+            <h3 class="params-title"><i class="fa-solid fa-sliders"></i> Parâmetros de Separação</h3>
+            <div class="params-grid">
+              <label class="param-item">
+                <span class="param-label">Modelo de Separação</span>
+                <select id="separation-model" class="param-select">
+                  <option value="htdemucs">HTDemucs (Alta Qualidade)</option>
+                  <option value="htdemucs_ft">HTDemucs Fine-Tuned</option>
+                  <option value="mdx_extra">MDX Extra</option>
+                  <option value="demucs">Demucs v3</option>
+                </select>
+              </label>
+              <label class="param-item">
+                <span class="param-label">Qualidade de Saída</span>
+                <select id="output-quality" class="param-select">
+                  <option value="high">Alta (WAV 44.1kHz)</option>
+                  <option value="medium">Média (MP3 320kbps)</option>
+                  <option value="low">Rápida (MP3 128kbps)</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── COLUNA DIREITA: Seleção de Voz ── -->
+        <div class="card" id="card-voice-select">
+          <div class="card-header">
+            <span class="card-icon bg-blue"><i class="fa-solid fa-microphone"></i></span>
+            <div>
+              <h2 class="card-title">Vocal de Referência</h2>
+              <p class="card-subtitle">Escolha ou envie o vocal para substituição</p>
+            </div>
+          </div>
+
+          <!-- Tabs dentro do card -->
+          <div class="inner-tabs">
+            <button class="inner-tab active" data-inner-tab="upload-new-voice" aria-selected="true">
+              <i class="fa-solid fa-upload"></i> Enviar Nova Voz
+            </button>
+            <button class="inner-tab" data-inner-tab="select-from-library" aria-selected="false">
+              <i class="fa-solid fa-list"></i> Da Biblioteca
+            </button>
+          </div>
+
+          <!-- Sub-painel: Upload de nova voz -->
+          <div class="inner-panel active" id="panel-upload-new-voice">
+            <div class="upload-zone small" id="voice-upload-zone" tabindex="0" role="button" aria-label="Clique ou arraste um arquivo de voz para fazer upload">
+              <input type="file" id="voice-file-input" accept="audio/*" hidden aria-label="Selecionar arquivo de voz" />
+              <div class="upload-placeholder" id="voice-placeholder">
+                <div class="upload-icon-wrap small">
+                  <i class="fa-solid fa-microphone-lines"></i>
+                </div>
+                <p class="upload-main-text">Arraste ou clique para enviar</p>
+                <p class="upload-sub-text">MP3, WAV, FLAC — máx. 50 MB</p>
+              </div>
+              <div class="upload-preview" id="voice-preview" hidden>
+                <div class="file-info">
+                  <span class="file-icon"><i class="fa-solid fa-file-audio"></i></span>
+                  <div class="file-meta">
+                    <span class="file-name" id="voice-file-name"></span>
+                    <span class="file-details" id="voice-file-details"></span>
+                  </div>
+                  <button class="btn-remove" id="voice-remove-btn" title="Remover arquivo" aria-label="Remover arquivo de voz">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div id="voice-waveform-container" class="waveform-container small">
+                  <div id="voice-waveform"></div>
+                </div>
+                <div class="player-controls" id="voice-player-controls">
+                  <button class="btn-play small" id="voice-play-btn" aria-label="Reproduzir/Pausar voz">
+                    <i class="fa-solid fa-play"></i>
+                  </button>
+                  <div class="player-time">
+                    <span id="voice-current-time">0:00</span>
+                    <span class="time-sep">/</span>
+                    <span id="voice-duration">0:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulário de salvamento na biblioteca -->
+            <div class="save-to-library" id="save-voice-form" hidden>
+              <h3 class="params-title"><i class="fa-solid fa-floppy-disk"></i> Salvar na Biblioteca</h3>
+              <div class="form-row">
+                <label class="form-label" for="voice-save-name">Nome da Voz *</label>
+                <input type="text" id="voice-save-name" class="form-input" placeholder="Ex: Tenor Masculino, Soprano..." maxlength="60" />
+              </div>
+              <div class="form-row">
+                <label class="form-label" for="voice-save-desc">Descrição (opcional)</label>
+                <input type="text" id="voice-save-desc" class="form-input" placeholder="Descreva o timbre, estilo..." maxlength="120" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Tags</label>
+                <div class="tags-input-wrap" id="tags-wrap">
+                  <span class="tag-chip" data-tag="masculino">masculino</span>
+                  <span class="tag-chip" data-tag="feminino">feminino</span>
+                  <span class="tag-chip" data-tag="tenor">tenor</span>
+                  <span class="tag-chip" data-tag="soprano">soprano</span>
+                  <span class="tag-chip" data-tag="baritono">barítono</span>
+                  <span class="tag-chip" data-tag="pop">pop</span>
+                  <span class="tag-chip" data-tag="r&b">r&b</span>
+                  <span class="tag-chip" data-tag="classico">clássico</span>
+                </div>
+              </div>
+              <button class="btn-secondary btn-full" id="save-voice-btn">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar na Biblioteca
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub-painel: Selecionar da biblioteca -->
+          <div class="inner-panel" id="panel-select-from-library">
+            <div class="library-search-bar">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="inline-voice-search" class="search-input" placeholder="Buscar vozes..." aria-label="Buscar vozes na biblioteca" />
+            </div>
+            <div class="voice-list" id="inline-voice-list">
+              <div class="empty-state small">
+                <i class="fa-solid fa-microphone-slash"></i>
+                <p>Nenhuma voz na biblioteca.</p>
+                <span>Envie sua primeira voz na aba ao lado.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Parâmetros de Conversão de Voz ── -->
+      <div class="card card-wide" id="card-conversion-params">
+        <div class="card-header">
+          <span class="card-icon bg-green"><i class="fa-solid fa-rotate"></i></span>
+          <div>
+            <h2 class="card-title">Parâmetros de Conversão</h2>
+            <p class="card-subtitle">Ajuste como a voz de referência será aplicada</p>
+          </div>
+          <button class="btn-icon ml-auto" id="toggle-params-btn" title="Expandir/Recolher parâmetros" aria-expanded="false" aria-controls="params-body">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="params-body" id="params-body">
+          <div class="params-grid four-cols">
+            <label class="param-item">
+              <span class="param-label">Transposição de Tom (semitones)</span>
+              <div class="range-wrap">
+                <input type="range" id="pitch-shift" min="-12" max="12" value="0" step="1" class="range-input" aria-label="Transposição de tom" />
+                <span class="range-value" id="pitch-shift-val">0</span>
+              </div>
+            </label>
+            <label class="param-item">
+              <span class="param-label">Índice de Proteção de Vogais</span>
+              <div class="range-wrap">
+                <input type="range" id="protect-vowels" min="0" max="0.5" value="0.33" step="0.01" class="range-input" aria-label="Proteção de vogais" />
+                <span class="range-value" id="protect-vowels-val">0.33</span>
+              </div>
+            </label>
+            <label class="param-item">
+              <span class="param-label">Mistura Original / Convertida (%)</span>
+              <div class="range-wrap">
+                <input type="range" id="mix-ratio" min="0" max="100" value="100" step="1" class="range-input" aria-label="Mistura original e convertida" />
+                <span class="range-value" id="mix-ratio-val">100%</span>
+              </div>
+            </label>
+            <label class="param-item">
+              <span class="param-label">Reverberação da Sala (%)</span>
+              <div class="range-wrap">
+                <input type="range" id="reverb-level" min="0" max="100" value="0" step="1" class="range-input" aria-label="Reverberação" />
+                <span class="range-value" id="reverb-level-val">0%</span>
+              </div>
+            </label>
+          </div>
+          <div class="params-grid four-cols">
+            <label class="param-item">
+              <span class="param-label">Algoritmo de Conversão</span>
+              <select id="conversion-algo" class="param-select">
+                <option value="rvc_v2">RVC v2 (Recomendado)</option>
+                <option value="so_vits">SoftVC + VITS</option>
+                <option value="diff_svc">Diff-SVC</option>
+                <option value="ddsp">DDSP-SVC</option>
+              </select>
+            </label>
+            <label class="param-item">
+              <span class="param-label">Filtro de Frequência (Hz)</span>
+              <select id="freq-filter" class="param-select">
+                <option value="none">Nenhum</option>
+                <option value="low_pass_8k">Low-pass 8kHz</option>
+                <option value="high_pass_100">High-pass 100Hz</option>
+                <option value="telephone">Efeito Telefone</option>
+              </select>
+            </label>
+            <label class="param-item checkbox-item">
+              <input type="checkbox" id="denoise-vocals" checked aria-label="Remover ruído do vocal" />
+              <div>
+                <span class="param-label">Remover Ruído do Vocal</span>
+                <span class="param-hint">Aplica denoiser antes da conversão</span>
+              </div>
+            </label>
+            <label class="param-item checkbox-item">
+              <input type="checkbox" id="auto-tune" aria-label="Auto-tune suave" />
+              <div>
+                <span class="param-label">Auto-tune Suave</span>
+                <span class="param-hint">Correção leve de afinação</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Botão de Processamento ── -->
+      <div class="process-bar" id="process-bar">
+        <div class="process-summary" id="process-summary">
+          <div class="summary-item" id="summary-music">
+            <i class="fa-solid fa-circle-xmark text-muted"></i>
+            <span>Música não selecionada</span>
+          </div>
+          <i class="fa-solid fa-plus text-muted"></i>
+          <div class="summary-item" id="summary-voice">
+            <i class="fa-solid fa-circle-xmark text-muted"></i>
+            <span>Vocal não selecionado</span>
+          </div>
+          <i class="fa-solid fa-arrow-right text-muted"></i>
+          <div class="summary-item" id="summary-result">
+            <i class="fa-solid fa-circle-question text-muted"></i>
+            <span>Resultado</span>
+          </div>
+        </div>
+        <button class="btn-process" id="process-btn" disabled>
+          <i class="fa-solid fa-bolt"></i>
+          Processar com IA
+        </button>
+      </div>
+
+      <!-- ── Progress de Processamento ── -->
+      <div class="processing-overlay" id="processing-overlay" hidden>
+        <div class="processing-card">
+          <div class="processing-animation">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring delay-1"></div>
+            <div class="pulse-ring delay-2"></div>
+            <i class="fa-solid fa-waveform-lines proc-icon"></i>
+          </div>
+          <h2 class="proc-title" id="proc-title">Separando Stems...</h2>
+          <p class="proc-subtitle" id="proc-subtitle">Identificando vocal principal na faixa de áudio</p>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <span class="progress-label" id="progress-label">0%</span>
+            </div>
+          </div>
+          <div class="proc-steps">
+            <div class="proc-step" id="pstep-1">
+              <span class="step-dot"></span>
+              <span>Separando stems com HTDemucs</span>
+            </div>
+            <div class="proc-step" id="pstep-2">
+              <span class="step-dot"></span>
+              <span>Convertendo vocal com RVC v2</span>
+            </div>
+            <div class="proc-step" id="pstep-3">
+              <span class="step-dot"></span>
+              <span>Remixando trilha final</span>
+            </div>
+            <div class="proc-step" id="pstep-4">
+              <span class="step-dot"></span>
+              <span>Finalizando e exportando</span>
+            </div>
+          </div>
+          <button class="btn-cancel" id="cancel-process-btn">
+            <i class="fa-solid fa-xmark"></i> Cancelar
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Resultado Final ── -->
+      <div class="result-section" id="result-section" hidden>
+        <div class="card result-card">
+          <div class="card-header">
+            <span class="card-icon bg-success"><i class="fa-solid fa-circle-check"></i></span>
+            <div>
+              <h2 class="card-title">Resultado Pronto!</h2>
+              <p class="card-subtitle" id="result-subtitle">Vocal convertido com sucesso</p>
+            </div>
+            <div class="result-badge">
+              <i class="fa-solid fa-sparkles"></i> Processado
+            </div>
+          </div>
+
+          <div class="result-grid">
+            <!-- Player do resultado -->
+            <div class="result-player-wrap">
+              <div id="result-waveform-container" class="waveform-container result">
+                <div id="result-waveform"></div>
+              </div>
+              <div class="player-controls large" id="result-player-controls">
+                <button class="btn-play large" id="result-play-btn" aria-label="Reproduzir/Pausar resultado">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+                <div class="player-progress-wrap">
+                  <div class="player-time">
+                    <span id="result-current-time">0:00</span>
+                    <span class="time-sep">/</span>
+                    <span id="result-duration">0:00</span>
+                  </div>
+                </div>
+                <div class="volume-ctrl">
+                  <i class="fa-solid fa-volume-high volume-icon"></i>
+                  <input type="range" class="volume-slider" id="result-volume" min="0" max="1" step="0.01" value="1" aria-label="Volume do resultado" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Comparação A/B -->
+            <div class="ab-compare">
+              <h3 class="ab-title"><i class="fa-solid fa-code-compare"></i> Comparação A/B</h3>
+              <div class="ab-buttons">
+                <button class="ab-btn active" id="ab-original" aria-pressed="true">
+                  <i class="fa-solid fa-music"></i>
+                  Original
+                </button>
+                <div class="ab-vs">vs</div>
+                <button class="ab-btn" id="ab-converted" aria-pressed="false">
+                  <i class="fa-solid fa-waveform-lines"></i>
+                  Convertida
+                </button>
+              </div>
+              <div class="ab-info" id="ab-info">
+                <i class="fa-solid fa-info-circle"></i>
+                Ouça a versão original para comparar
+              </div>
+            </div>
+
+            <!-- Metadados do resultado -->
+            <div class="result-meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Duração</span>
+                <span class="meta-value" id="meta-duration">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Formato</span>
+                <span class="meta-value" id="meta-format">WAV 44.1kHz</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Vocal Usado</span>
+                <span class="meta-value" id="meta-voice">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Algoritmo</span>
+                <span class="meta-value" id="meta-algo">RVC v2</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Tempo de Processo</span>
+                <span class="meta-value" id="meta-proc-time">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Tamanho Estimado</span>
+                <span class="meta-value" id="meta-size">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ações de exportação -->
+          <div class="export-actions">
+            <h3 class="export-title"><i class="fa-solid fa-download"></i> Exportar</h3>
+            <div class="export-grid">
+              <button class="export-btn primary" id="export-wav">
+                <i class="fa-solid fa-file-audio"></i>
+                <div>
+                  <span class="export-format">WAV</span>
+                  <span class="export-desc">Sem perdas · 44.1kHz · 16bit</span>
+                </div>
+              </button>
+              <button class="export-btn" id="export-mp3-320">
+                <i class="fa-brands fa-spotify"></i>
+                <div>
+                  <span class="export-format">MP3 320kbps</span>
+                  <span class="export-desc">Alta qualidade</span>
+                </div>
+              </button>
+              <button class="export-btn" id="export-mp3-192">
+                <i class="fa-solid fa-compact-disc"></i>
+                <div>
+                  <span class="export-format">MP3 192kbps</span>
+                  <span class="export-desc">Tamanho reduzido</span>
+                </div>
+              </button>
+              <button class="export-btn" id="export-stems">
+                <i class="fa-solid fa-layer-group"></i>
+                <div>
+                  <span class="export-format">Stems Separados</span>
+                  <span class="export-desc">Vocal + Instrumental · ZIP</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="result-actions-row">
+            <button class="btn-secondary" id="new-project-btn">
+              <i class="fa-solid fa-plus"></i> Novo Projeto
+            </button>
+            <button class="btn-secondary" id="save-project-btn">
+              <i class="fa-solid fa-floppy-disk"></i> Salvar Projeto
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ─────────── TAB: BIBLIOTECA DE VOZES ─────────── -->
+    <section class="tab-panel" id="tab-library" role="tabpanel" aria-labelledby="btn-library">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Biblioteca de Vozes</h1>
+          <p class="page-subtitle">Gerencie e organize todos os vocais de referência enviados</p>
+        </div>
+        <button class="btn-primary" id="add-voice-btn">
+          <i class="fa-solid fa-plus"></i> Adicionar Voz
+        </button>
+      </div>
+
+      <!-- Filtros e busca -->
+      <div class="filters-bar">
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" id="library-search" class="search-input" placeholder="Buscar por nome, tag..." aria-label="Buscar vozes na biblioteca" />
+        </div>
+        <div class="filter-tags" role="group" aria-label="Filtrar por tag">
+          <button class="filter-tag active" data-filter="all">Todas</button>
+          <button class="filter-tag" data-filter="masculino">Masculino</button>
+          <button class="filter-tag" data-filter="feminino">Feminino</button>
+          <button class="filter-tag" data-filter="tenor">Tenor</button>
+          <button class="filter-tag" data-filter="soprano">Soprano</button>
+          <button class="filter-tag" data-filter="pop">Pop</button>
+        </div>
+        <div class="view-toggle" role="group" aria-label="Modo de visualização">
+          <button class="view-btn active" id="view-grid" title="Visualização em grade" aria-pressed="true"><i class="fa-solid fa-grid-2"></i></button>
+          <button class="view-btn" id="view-list" title="Visualização em lista" aria-pressed="false"><i class="fa-solid fa-list"></i></button>
+        </div>
+      </div>
+
+      <!-- Grid / Lista de vozes -->
+      <div class="voice-grid" id="voice-grid" role="list">
+        <!-- Preenchido via JS -->
+      </div>
+
+      <!-- Estado vazio -->
+      <div class="empty-library" id="empty-library" hidden>
+        <div class="empty-illustration">
+          <i class="fa-solid fa-microphone-slash"></i>
+        </div>
+        <h2>Nenhuma voz encontrada</h2>
+        <p>Envie a primeira voz de referência usando o Estúdio ou clicando em "Adicionar Voz".</p>
+        <button class="btn-primary" id="empty-add-voice-btn">
+          <i class="fa-solid fa-plus"></i> Adicionar Primeira Voz
+        </button>
+      </div>
+    </section>
+
+    <!-- ─────────── TAB: PROJETOS ─────────── -->
+    <section class="tab-panel" id="tab-projects" role="tabpanel" aria-labelledby="btn-projects">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Meus Projetos</h1>
+          <p class="page-subtitle">Histórico de conversões realizadas</p>
+        </div>
+        <button class="btn-primary" id="new-project-page-btn">
+          <i class="fa-solid fa-plus"></i> Novo Projeto
+        </button>
+      </div>
+
+      <div class="projects-list" id="projects-list" role="list">
+        <!-- Preenchido via JS -->
+      </div>
+
+      <div class="empty-library" id="empty-projects" hidden>
+        <div class="empty-illustration">
+          <i class="fa-solid fa-folder-open"></i>
+        </div>
+        <h2>Nenhum projeto ainda</h2>
+        <p>Crie seu primeiro projeto de conversão vocal no Estúdio.</p>
+        <button class="btn-primary" id="empty-new-project-btn">
+          <i class="fa-solid fa-bolt"></i> Ir para o Estúdio
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════ MODAL: Add Voice ═══════════════════════ -->
+  <div class="modal-backdrop" id="modal-add-voice" role="dialog" aria-modal="true" aria-labelledby="modal-add-voice-title" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-add-voice-title"><i class="fa-solid fa-microphone-lines"></i> Adicionar Nova Voz</h2>
+        <button class="btn-icon" id="close-modal-btn" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-zone" id="modal-voice-upload-zone" tabindex="0" role="button" aria-label="Upload de arquivo de voz">
+          <input type="file" id="modal-voice-file-input" accept="audio/*" hidden />
+          <div class="upload-placeholder" id="modal-voice-placeholder">
+            <div class="upload-icon-wrap">
+              <i class="fa-solid fa-microphone-lines"></i>
+            </div>
+            <p class="upload-main-text">Arraste ou clique para enviar</p>
+            <p class="upload-sub-text">MP3, WAV, FLAC — máx. 50 MB</p>
+          </div>
+          <div class="upload-preview" id="modal-voice-preview" hidden>
+            <div class="file-info">
+              <span class="file-icon"><i class="fa-solid fa-file-audio"></i></span>
+              <div class="file-meta">
+                <span class="file-name" id="modal-voice-file-name"></span>
+                <span class="file-details" id="modal-voice-file-details"></span>
+              </div>
+              <button class="btn-remove" id="modal-voice-remove-btn" aria-label="Remover arquivo">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div id="modal-waveform-container" class="waveform-container small">
+              <div id="modal-voice-waveform"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row mt-16">
+          <label class="form-label" for="modal-voice-name">Nome da Voz *</label>
+          <input type="text" id="modal-voice-name" class="form-input" placeholder="Ex: Tenor Masculino, Soprano..." maxlength="60" />
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="modal-voice-desc">Descrição (opcional)</label>
+          <input type="text" id="modal-voice-desc" class="form-input" placeholder="Descreva o timbre, estilo, gênero musical..." maxlength="120" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Tags</label>
+          <div class="tags-input-wrap" id="modal-tags-wrap">
+            <span class="tag-chip" data-tag="masculino">masculino</span>
+            <span class="tag-chip" data-tag="feminino">feminino</span>
+            <span class="tag-chip" data-tag="tenor">tenor</span>
+            <span class="tag-chip" data-tag="soprano">soprano</span>
+            <span class="tag-chip" data-tag="baritono">barítono</span>
+            <span class="tag-chip" data-tag="pop">pop</span>
+            <span class="tag-chip" data-tag="r&b">r&b</span>
+            <span class="tag-chip" data-tag="classico">clássico</span>
+            <span class="tag-chip" data-tag="jazz">jazz</span>
+            <span class="tag-chip" data-tag="rock">rock</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="modal-cancel-btn">Cancelar</button>
+        <button class="btn-primary" id="modal-save-btn">
+          <i class="fa-solid fa-floppy-disk"></i> Salvar na Biblioteca
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ MODAL: Voice Detail ═══════════════════════ -->
+  <div class="modal-backdrop" id="modal-voice-detail" role="dialog" aria-modal="true" aria-labelledby="voice-detail-title" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="voice-detail-title"><i class="fa-solid fa-microphone"></i> <span id="detail-voice-name"></span></h2>
+        <button class="btn-icon" id="close-detail-modal-btn" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="detail-waveform-container" class="waveform-container">
+          <div id="detail-voice-waveform"></div>
+        </div>
+        <div class="player-controls" id="detail-player-controls">
+          <button class="btn-play" id="detail-play-btn" aria-label="Reproduzir/Pausar">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <div class="player-time">
+            <span id="detail-current-time">0:00</span>
+            <span class="time-sep">/</span>
+            <span id="detail-duration">0:00</span>
+          </div>
+        </div>
+        <div class="detail-meta">
+          <div class="meta-item"><span class="meta-label">Arquivo</span><span class="meta-value" id="detail-filename"></span></div>
+          <div class="meta-item"><span class="meta-label">Duração</span><span class="meta-value" id="detail-duration-meta"></span></div>
+          <div class="meta-item"><span class="meta-label">Tamanho</span><span class="meta-value" id="detail-size"></span></div>
+          <div class="meta-item"><span class="meta-label">Adicionado em</span><span class="meta-value" id="detail-created"></span></div>
+        </div>
+        <div class="detail-tags" id="detail-tags-display"></div>
+        <p class="detail-desc" id="detail-desc-display"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost btn-danger" id="detail-delete-btn">
+          <i class="fa-solid fa-trash"></i> Excluir
+        </button>
+        <button class="btn-ghost" id="detail-close-btn">Fechar</button>
+        <button class="btn-primary" id="detail-use-btn">
+          <i class="fa-solid fa-bolt"></i> Usar no Estúdio
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/waveform.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/studio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
